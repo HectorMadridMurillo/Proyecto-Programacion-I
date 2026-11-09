@@ -1,5 +1,5 @@
 # Proyecto-Programacion-I
-Sistema de Planilla Hospitalaria
+#Sistema de Planilla Hospitalaria
 Integrantes
 Nombre completo	/ Cédula
 Raymond Saldaña Caseres / 7-0330-0099
