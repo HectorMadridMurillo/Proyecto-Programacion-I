@@ -1,0 +1,245 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+top to bottom direction
+
+package "Capa: Modelo" {
+  abstract class Empleado {
+    # id: int
+    # nombre: string
+    # departamentoId: int
+    # salarioBase: double
+    # horasExtra: double
+    # turnosNocturnos: int
+    # guardias: int
+    # detalle: string
+    + Empleado(id, nombre, departamentoId, salarioBase, horasExtra, turnosNocturnos, guardias, detalle)
+    + virtual ~Empleado()
+    + getId(): int
+    + getNombre(): const string&
+    + getDepartamentoId(): int
+    + getSalarioBase(): double
+    + getHorasExtra(): double
+    + getTurnosNocturnos(): int
+    + getGuardias(): int
+    + getDetalle(): const string&
+    + cambiarJornada(extras: double, nocturnos: int, guardiasNuevas: int): void
+    {abstract} + bonificaciones(): double
+    {abstract} + tipo(): string
+  }
+
+  class Medico {
+    + Medico(id, n, d, s, h, t, g, especialidad)
+    + bonificaciones(): double
+    + tipo(): string
+  }
+  class Enfermero {
+    + Enfermero(id, n, d, s, h, t, g, area)
+    + bonificaciones(): double
+    + tipo(): string
+  }
+  class Administrativo {
+    + Administrativo(id, n, d, s, h, t, g, cargo)
+    + bonificaciones(): double
+    + tipo(): string
+  }
+
+  class Puesto {
+    - id: int
+    - nombre: string
+    + Puesto(id: int = 0, nombre: string = "")
+    + getId(): int
+    + getNombre(): const string&
+  }
+
+  class Departamento {
+    - id: int
+    - nombre: string
+    - puestos: Lista<Puesto>
+    + Departamento(id: int, nombre: string)
+    + getId(): int
+    + getNombre(): const string&
+    + getPuestos(): const Lista<Puesto>&
+    + agregarPuesto(id: int, nombre: string): bool
+  }
+
+  class ComprobantePago {
+    - numero: int
+    - empleadoId: int
+    - departamentoId: int
+    - empleado: Empleado*
+    - departamento: Departamento*
+    - periodo: string
+    - base: double
+    - extras: double
+    - bonos: double
+    - deducciones: double
+    - pagado: bool
+    + ComprobantePago(numero, empleado, departamento, periodo, base, extras, bonos, deducciones, pagado: bool = false)
+    + getNumero(): int
+    + getEmpleadoId(): int
+    + getDepartamentoId(): int
+    + getPeriodo(): const string&
+    + getBase(): double
+    + getExtras(): double
+    + getBonos(): double
+    + getDeducciones(): double
+    + bruto(): double
+    + neto(): double
+    + estaPagado(): bool
+    + marcarPagado(): void
+    + getEmpleado(): const Empleado*
+    + getDepartamento(): const Departamento*
+  }
+}
+
+package "Estructuras dinámicas (manuales)" {
+  class "Nodo<T>" as Nodo {
+    + dato: T
+    + siguiente: Nodo<T>*
+    + explicit Nodo(valor: const T&)
+  }
+  class "Lista<T>" as Lista {
+    - primero: Nodo<T>*
+    - ultimo: Nodo<T>*
+    - cantidad: size_t
+    - Lista(copia)  // deshabilitado
+    - operator=(copia)  // deshabilitado
+    + Lista()
+    + ~Lista()
+    + agregar(dato: const T&): void
+    + inicio(): Nodo<T>*
+    + tamano(): size_t
+    + vacia(): bool
+    + limpiar(): void
+  }
+}
+
+package "Capa: Persistencia" {
+  interface IRepositorio {
+    + virtual ~IRepositorio()
+    {abstract} + cargar(sistema: Sistema&): bool
+    {abstract} + guardar(sistema: const Sistema&): bool
+  }
+  class RepositorioTexto {
+    - carpeta: string
+    + explicit RepositorioTexto(carpeta: string = ".")
+    + cargar(sistema: Sistema&): bool
+    + guardar(sistema: const Sistema&): bool
+  }
+}
+
+package "Capa: Controlador (negocio)" {
+  class Sistema {
+    - empleados: Lista<Empleado*>
+    - departamentos: Lista<Departamento*>
+    - comprobantes: Lista<ComprobantePago*>
+    - repositorio: IRepositorio&
+    - Sistema(copia)  // deshabilitado
+    - operator=(copia)  // deshabilitado
+    + explicit Sistema(repositorio: IRepositorio&)
+    + ~Sistema()
+    + cargar(): bool
+    + guardar(): bool
+    + buscarDepartamento(id: int): Departamento*
+    + buscarEmpleado(id: int): Empleado*
+    + buscarComprobante(numero: int): ComprobantePago*
+    + getDepartamentos(): const Lista<Departamento*>&
+    + getEmpleados(): const Lista<Empleado*>&
+    + getComprobantes(): const Lista<ComprobantePago*>&
+    + nuevoDepartamento(id, nombre, persistir: bool = true): bool
+    + nuevoPuesto(deptoId, puestoId, nombre, persistir: bool = true): bool
+    + nuevoEmpleado(empleado: Empleado*, persistir: bool = true): bool
+    + actualizarJornada(id, extras, nocturnos, guardias): bool
+    + calcularPlanilla(empleadoId, periodo, porcentajeDeduccion): int
+    + procesarPago(numero: int): bool
+    + agregarComprobanteCargado(numero, empleadoId, deptoId, periodo, base, extras, bonos, deducciones, pagado): bool
+  }
+}
+
+package "Capa: Vista" {
+  class Consola {
+    - sistema: Sistema&
+    - crearDepartamento()
+    - crearPuesto()
+    - crearEmpleado()
+    - mostrarDepartamentos()
+    - mostrarEmpleados()
+    - cambiarJornada()
+    - generarComprobante()
+    - mostrarComprobantes()
+    - realizarPago()
+    + explicit Consola(sistema: Sistema&)
+    + ejecutar(): void
+  }
+}
+
+' --- Herencia (LSP) ---
+Empleado <|-- Medico
+Empleado <|-- Enfermero
+Empleado <|-- Administrativo
+
+' --- Composición (el todo libera a la parte) ---
+Departamento "1" *-- "0..*" Puesto : contiene (por valor)
+Sistema "1" *-- "0..*" Empleado : delete en ~Sistema
+Sistema "1" *-- "0..*" Departamento : delete en ~Sistema
+Sistema "1" *-- "0..*" ComprobantePago : delete en ~Sistema
+Sistema "1" *-- "3" Lista : miembros por valor
+Lista "1" *-- "0..*" Nodo : delete en limpiar
+Departamento "1" *-- "1" Lista : miembro por valor
+
+' --- Agregación (referencia sin propiedad) ---
+ComprobantePago "0..*" o-- "1" Empleado : referencia
+ComprobantePago "0..*" o-- "1" Departamento : referencia
+
+' --- Asociación ---
+Consola --> Sistema : usa
+Sistema --> IRepositorio : inyectado (DIP)
+
+' --- Realización ---
+IRepositorio <|.. RepositorioTexto
+
+' --- Dependencia ---
+RepositorioTexto ..> Sistema : lee/escribe
+
+note bottom of RepositorioTexto
+  Archivos: departamentos.txt,
+  empleados.txt, planilla.txt
+  Formato separado por '|'
+  Parseo en namespace anónimo:
+  separar, entero, decimal,
+  reemplazar (tmp + rename).
+end note
+
+note bottom of Consola
+  Validación de entrada en
+  namespace anónimo de Consola.cpp:
+  texto(), numero(), real(), aviso().
+  No se modela como clase.
+end note
+
+note bottom of Sistema
+  OCP: agregar otra subclase de
+  Empleado (p.ej. Residente) NO exige
+  tocar calcularPlanilla(); la
+  bonificación es polimórfica.
+end note
+
+note top of Empleado
+  LSP: en calcularPlanilla() solo se
+  usa Empleado*, sin if/switch por tipo.
+end note
+
+note right of IRepositorio
+  DIP / ISP: Sistema depende de la
+  abstracción. main.cpp inyecta
+  RepositorioTexto.
+end note
+
+note bottom of ComprobantePago
+  Agregación + ids: los punteros
+  resuelven nombre/tipo; los ids
+  sirven para serializar.
+end note
+
+@enduml
